@@ -1,0 +1,51 @@
+const sessionFactory = require('./factories/sessionFactory');
+const userFactory = require('./factories/userFactory');
+const Page = require('./helpers/page');
+
+
+let page;
+beforeEach(async () => {
+    page = await Page.build();
+    await page.page.goto('http://localhost:3000/');
+})
+
+afterEach(async () => {
+    await page.browser.close();
+})
+
+test('The header has the correct text', async () => {
+    const text = await page.page.$eval('a.brand-logo', el => el.innerHTML);
+    expect(text).toEqual('Blogster');
+});
+
+
+test('clicking login starts oauth flow', async () => {
+    await page.page.click('.right a');
+    const url = await page.page.url();
+    expect(url).toMatch(/accounts\.google\.com/)
+    //console.log("url" + url);
+    //https://accounts.google.com/
+});
+
+
+test.only('When signed in, shows logout button', async () => {
+    //const id = '65949d837f242b7468d781e3';
+    const user = await userFactory();
+    const {session, sig} =  sessionFactory(user);
+
+    //console.log(sessionString, sig);
+    await page.page.setCookie({
+        name: 'session', value: session
+    });
+    await page.page.setCookie({
+        name: 'session.sig', value: sig
+    });
+
+
+    await page.page.goto('http://localhost:3000/');
+
+    await page.page.waitFor('a[href="/auth/logout"]');
+    const text = await page.page.$eval('a[href="/auth/logout"]', el => el.innerHTML);
+    expect(text).toEqual('Logout');
+});
+
